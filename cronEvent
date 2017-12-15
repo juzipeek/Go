@@ -1,0 +1,72 @@
+package main
+
+import "C"
+import (
+	"github.com/jakecoffman/cron"
+	"strconv"
+)
+
+
+
+type SchduleActiveCallback func(int,string)
+
+type ScheduleJob struct {
+	id       int
+	msg      string
+	callback SchduleActiveCallback
+}
+
+var g_scheduleManager *ScheduleManager
+
+func (this *ScheduleJob) Run() {
+	if nil != this.callback {
+		this.callback(this.id,this.msg);
+	}
+}
+
+type ScheduleManager struct {
+	cronJob *cron.Cron
+}
+
+
+func (this *ScheduleManager)NewScheduleJob(_id int, _msg string,_job SchduleActiveCallback) *ScheduleJob {
+	instance := &ScheduleJob{
+		id:       _id,
+		msg:      _msg,
+		callback: _job,
+	}
+	return instance
+}
+func NewScheduleManager() *ScheduleManager {
+	instance :=&ScheduleManager{}
+	instance.cronJob = cron.New()
+	return instance
+}
+//export Start
+func Start() {
+	g_scheduleManager.cronJob.Start()
+}
+
+//export Stop
+func Stop() {
+	g_scheduleManager.cronJob.Stop()
+}
+
+//export AddJob
+func AddJob(id int,msg string, scheduleExpr string,f SchduleActiveCallback) {
+	job := g_scheduleManager.NewScheduleJob(id,msg, f)
+	g_scheduleManager.cronJob.AddJob(scheduleExpr, job,strconv.Itoa(id))
+}
+
+//export RemoveJob
+func RemoveJob(id int) {
+	g_scheduleManager.cronJob.RemoveJob(strconv.Itoa(id))
+}
+
+//export Init
+func Init() {
+	g_scheduleManager = NewScheduleManager()
+}
+
+
+func main(){}
